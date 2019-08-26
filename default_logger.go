@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func NewDefaultLogger(log *log.Logger) Logger {
+func NewDefaultLogger(log *log.Logger) *DefaultLogger {
 	return &DefaultLogger{
 		log:        log,
 		Enabled:    true,
@@ -22,6 +22,8 @@ type DefaultLogger struct {
 	LogConnect bool
 	LogClose   bool
 }
+
+var _ Logger = &DefaultLogger{}
 
 func (dl *DefaultLogger) TxRollback(txID int64) {
 	if !dl.Enabled {
