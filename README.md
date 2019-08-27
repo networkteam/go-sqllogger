@@ -2,6 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/networkteam/go-sqllogger?style=flat-square)](https://goreportcard.com/report/github.com/networkteam/go-sqllogger)
 [![Go Doc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/networkteam/go-sqllogger)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/networkteam/go-sqllogger?style=flat-square&include_prereleases)](https://github.com/networkteam/go-sqllogger/releases)
 [![Build Status](https://travis-ci.com/networkteam/go-sqllogger.svg?branch=master)](https://travis-ci.com/networkteam/go-sqllogger)
 
 **Go SQL driver adapter for logging queries and other SQL operations**

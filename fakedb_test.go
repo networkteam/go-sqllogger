@@ -191,19 +191,6 @@ type fakeStmt struct {
 
 var fdriver driver.Driver = &fakeDriver{}
 
-func contains(list []string, y string) bool {
-	for _, x := range list {
-		if x == y {
-			return true
-		}
-	}
-	return false
-}
-
-type Dummy struct {
-	driver.Driver
-}
-
 // hook to simulate connection failures
 var hookOpenErr struct {
 	sync.Mutex

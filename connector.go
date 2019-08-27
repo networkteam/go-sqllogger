@@ -9,6 +9,11 @@ import (
 	"sync"
 )
 
+// LoggingConnector wraps the given driver.Connector and calls functions on the given Logger
+// for queries and other SQL operations.
+//
+// Note: Due to the amount of optional interfaces in the database/sql/driver package, there might be some features
+// of the original driver that are not exposed on the returned driver.Connector.
 func LoggingConnector(log Logger, connector driver.Connector) driver.Connector {
 	return &lconnector{
 		log:  log,
