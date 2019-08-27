@@ -2,6 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/networkteam/go-sqllogger?style=flat-square)](https://goreportcard.com/report/github.com/networkteam/go-sqllogger)
 [![Go Doc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/networkteam/go-sqllogger)
+[![Build Status](https://travis-ci.com/networkteam/go-sqllogger.svg?branch=master)](https://travis-ci.com/networkteam/go-sqllogger)
 
 **Go SQL driver adapter for logging queries and other SQL operations**
 
@@ -44,14 +45,14 @@ func main() {
 	logger := sqllogger.NewDefaultLogger(l)
 	logger.LogClose = true
 
-	// Any driver exposing a driver.Connector can be wrapped with logging  
+	// Any driver exposing a driver.Connector can be wrapped with logging
 	pqConnector, err := pq.NewConnector("dbname=test sslmode=disable")
 	if err != nil {
 		failf("could not connect to database: %v", err)
 	}
 	connector := sqllogger.LoggingConnector(logger, pqConnector)
 
-	// db is a standard *sql.DB 
+	// db is a standard *sql.DB
 	db := sql.OpenDB(connector)
 
 	ctx := context.Background()
@@ -81,7 +82,7 @@ func failf(format string, args ...interface{}) {
 Running the example:
 
 ```
-> createdb test # If it does not exist 
+> createdb test # If it does not exist
 > go run github.com/networkteam/go-sqllogger/example
 SQL: Connect → CONN(1)
 SQL: CONN(1) ► Query(SELECT 42) → ROWS(2)
