@@ -65,7 +65,6 @@ func (dl *DefaultLogger) Connect(connID int64) {
 	dl.log.Printf("Connect → CONN(%d)", connID)
 }
 
-
 // ConnBegin satisfies Logger interface
 func (dl *DefaultLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
 	if !dl.Enabled {
