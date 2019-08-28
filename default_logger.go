@@ -2,11 +2,15 @@ package sqllogger
 
 import (
 	"database/sql/driver"
-	"log"
 )
 
+// StdLogger is an interface to adapt the DefaultLogger to the standard library log.Logger or other log frameworks
+type StdLogger interface {
+	Printf(format string, args ...interface{})
+}
+
 // NewDefaultLogger creates a new default logger with sensible defaults
-func NewDefaultLogger(log *log.Logger) *DefaultLogger {
+func NewDefaultLogger(log StdLogger) *DefaultLogger {
 	return &DefaultLogger{
 		log:        log,
 		Enabled:    true,
@@ -17,7 +21,7 @@ func NewDefaultLogger(log *log.Logger) *DefaultLogger {
 
 // DefaultLogger is an implementation of the Logger interface logging to a *log.Logger from the standard library
 type DefaultLogger struct {
-	log *log.Logger
+	log StdLogger
 
 	// Enabled sets, whether
 	Enabled bool

@@ -4,7 +4,10 @@ import (
 	"database/sql/driver"
 )
 
-// Logger is the interface for a log adapter that is used to log SQL queries and operations in the LoggingConnector
+// Logger is the interface for a specialized SQL logger that is used to log SQL queries and operations in the LoggingConnector
+//
+// With this interface, adapters can be implemented for any log framework. For the standard library log.Logger, a
+// DefaultLogger is provided as a default implementation.
 //
 // All methods are only called if the original operation returned without an error.
 type Logger interface {
