@@ -15,7 +15,7 @@ func NewLogger(l *logrus.Logger, opts ...Opts) *Logger {
 	case 1:
 		o = opts[0]
 	default:
-		panic("NewLogger expects zero or one opts")
+		panic("expected zero or one opts")
 	}
 	return &Logger{
 		logrusLogger: l,

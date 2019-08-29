@@ -4,14 +4,16 @@ import (
 	"database/sql/driver"
 )
 
-// StdLogger is an interface to adapt the DefaultLogger to the standard library log.Logger or other log frameworks
+// StdLogger is an interface to adapt the DefaultSQLLogger to the standard library log.Logger or other log frameworks
 type StdLogger interface {
 	Printf(format string, args ...interface{})
 }
 
-// NewDefaultLogger creates a new default logger with sensible defaults
-func NewDefaultLogger(log StdLogger) *DefaultLogger {
-	return &DefaultLogger{
+// NewDefaultSQLLogger creates a new default SQL logger with sensible defaults
+//
+// A *log.Logger can be passed or any other implementation of the StdLogger interface.
+func NewDefaultSQLLogger(log StdLogger) *DefaultSQLLogger {
+	return &DefaultSQLLogger{
 		log:        log,
 		Enabled:    true,
 		LogConnect: true,
@@ -19,8 +21,8 @@ func NewDefaultLogger(log StdLogger) *DefaultLogger {
 	}
 }
 
-// DefaultLogger is an implementation of the Logger interface logging to a *log.Logger from the standard library
-type DefaultLogger struct {
+// DefaultSQLLogger is an implementation of the Logger interface logging to a *log.Logger from the standard library
+type DefaultSQLLogger struct {
 	log StdLogger
 
 	// Enabled sets, whether
@@ -30,10 +32,10 @@ type DefaultLogger struct {
 	LogClose   bool
 }
 
-var _ Logger = &DefaultLogger{}
+var _ SQLLogger = &DefaultSQLLogger{}
 
 // TxRollback satisfies Logger interface
-func (dl *DefaultLogger) TxRollback(txID int64) {
+func (dl *DefaultSQLLogger) TxRollback(txID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -41,7 +43,7 @@ func (dl *DefaultLogger) TxRollback(txID int64) {
 }
 
 // TxCommit satisfies Logger interface
-func (dl *DefaultLogger) TxCommit(txID int64) {
+func (dl *DefaultSQLLogger) TxCommit(txID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -49,7 +51,7 @@ func (dl *DefaultLogger) TxCommit(txID int64) {
 }
 
 // RowsClose satisfies Logger interface
-func (dl *DefaultLogger) RowsClose(rowsID int64) {
+func (dl *DefaultSQLLogger) RowsClose(rowsID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -59,7 +61,7 @@ func (dl *DefaultLogger) RowsClose(rowsID int64) {
 }
 
 // Connect satisfies Logger interface
-func (dl *DefaultLogger) Connect(connID int64) {
+func (dl *DefaultSQLLogger) Connect(connID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -70,7 +72,7 @@ func (dl *DefaultLogger) Connect(connID int64) {
 }
 
 // ConnBegin satisfies Logger interface
-func (dl *DefaultLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
+func (dl *DefaultSQLLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
 	if !dl.Enabled {
 		return
 	}
@@ -78,7 +80,7 @@ func (dl *DefaultLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
 }
 
 // ConnPrepare satisfies Logger interface
-func (dl *DefaultLogger) ConnPrepare(connID, stmtID int64, query string) {
+func (dl *DefaultSQLLogger) ConnPrepare(connID, stmtID int64, query string) {
 	if !dl.Enabled {
 		return
 	}
@@ -86,7 +88,7 @@ func (dl *DefaultLogger) ConnPrepare(connID, stmtID int64, query string) {
 }
 
 // ConnPrepareContext satisfies Logger interface
-func (dl *DefaultLogger) ConnPrepareContext(connID int64, stmtID int64, query string) {
+func (dl *DefaultSQLLogger) ConnPrepareContext(connID int64, stmtID int64, query string) {
 	if !dl.Enabled {
 		return
 	}
@@ -94,7 +96,7 @@ func (dl *DefaultLogger) ConnPrepareContext(connID int64, stmtID int64, query st
 }
 
 // ConnQuery satisfies Logger interface
-func (dl *DefaultLogger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -102,7 +104,7 @@ func (dl *DefaultLogger) ConnQuery(connID, rowsID int64, query string, args []dr
 }
 
 // ConnQueryContext satisfies Logger interface
-func (dl *DefaultLogger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -110,7 +112,7 @@ func (dl *DefaultLogger) ConnQueryContext(connID int64, rowsID int64, query stri
 }
 
 // ConnExec satisfies Logger interface
-func (dl *DefaultLogger) ConnExec(connID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) ConnExec(connID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -118,7 +120,7 @@ func (dl *DefaultLogger) ConnExec(connID int64, query string, args []driver.Valu
 }
 
 // ConnExecContext satisfies Logger interface
-func (dl *DefaultLogger) ConnExecContext(connID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) ConnExecContext(connID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -126,7 +128,7 @@ func (dl *DefaultLogger) ConnExecContext(connID int64, query string, args []driv
 }
 
 // ConnClose satisfies Logger interface
-func (dl *DefaultLogger) ConnClose(connID int64) {
+func (dl *DefaultSQLLogger) ConnClose(connID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -136,7 +138,7 @@ func (dl *DefaultLogger) ConnClose(connID int64) {
 }
 
 // StmtExec satisfies Logger interface
-func (dl *DefaultLogger) StmtExec(stmtID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) StmtExec(stmtID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -144,7 +146,7 @@ func (dl *DefaultLogger) StmtExec(stmtID int64, query string, args []driver.Valu
 }
 
 // StmtExecContext satisfies Logger interface
-func (dl *DefaultLogger) StmtExecContext(stmtID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) StmtExecContext(stmtID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -152,7 +154,7 @@ func (dl *DefaultLogger) StmtExecContext(stmtID int64, query string, args []driv
 }
 
 // StmtQuery satisfies Logger interface
-func (dl *DefaultLogger) StmtQuery(stmtID, rowsID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) StmtQuery(stmtID, rowsID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -160,7 +162,7 @@ func (dl *DefaultLogger) StmtQuery(stmtID, rowsID int64, query string, args []dr
 }
 
 // StmtQueryContext satisfies Logger interface
-func (dl *DefaultLogger) StmtQueryContext(stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) StmtQueryContext(stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -168,7 +170,7 @@ func (dl *DefaultLogger) StmtQueryContext(stmtID int64, rowsID int64, query stri
 }
 
 // StmtClose satisfies Logger interface
-func (dl *DefaultLogger) StmtClose(stmtID int64) {
+func (dl *DefaultSQLLogger) StmtClose(stmtID int64) {
 	if !dl.Enabled {
 		return
 	}

@@ -9,12 +9,12 @@ import (
 	"sync"
 )
 
-// LoggingConnector wraps the given driver.Connector and calls functions on the given Logger
-// for queries and other SQL operations.
+// LoggingConnector wraps the given driver.Connector
+// and invokes the given SQLLogger for queries and other SQL operations.
 //
 // Note: Due to the amount of optional interfaces in the database/sql/driver package, there might be some features
 // of the original driver that are not exposed on the returned driver.Connector.
-func LoggingConnector(log Logger, connector driver.Connector) driver.Connector {
+func LoggingConnector(log SQLLogger, connector driver.Connector) driver.Connector {
 	return &lconnector{
 		log:  log,
 		cnct: connector,
@@ -28,7 +28,7 @@ var (
 
 type lconnector struct {
 	cnct driver.Connector
-	log  Logger
+	log  SQLLogger
 }
 
 func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -49,7 +49,7 @@ func (l *lconnector) Driver() driver.Driver {
 
 type lconn struct {
 	id   int64
-	log  Logger
+	log  SQLLogger
 	conn driver.Conn
 }
 
@@ -213,7 +213,7 @@ var _ driver.ConnBeginTx = &lconn{}
 var _ driver.ConnPrepareContext = &lconn{}
 
 type lstmt struct {
-	log   Logger
+	log   SQLLogger
 	stmt  driver.Stmt
 	query string
 	id    int64
@@ -316,7 +316,7 @@ var _ driver.StmtExecContext = &lstmt{}
 var _ driver.StmtQueryContext = &lstmt{}
 
 type lrows struct {
-	log  Logger
+	log  SQLLogger
 	rows driver.Rows
 	id   int64
 }
@@ -365,7 +365,7 @@ func wrapRows(id int64, log Logger, rows driver.Rows) driver.Rows {
 }
 
 type ltx struct {
-	log Logger
+	log SQLLogger
 	tx  driver.Tx
 	id  int64
 }
@@ -401,7 +401,7 @@ func (l *lconn) wrapTx(id int64, tx driver.Tx) driver.Tx {
 }
 
 type ld struct {
-	log Logger
+	log SQLLogger
 	drv driver.Driver
 }
 

@@ -11,11 +11,11 @@ func (tl *testLogger) Printf(format string, args ...interface{}) {
 	*tl = append([]string(*tl), fmt.Sprintf(format, args...))
 }
 
-func TestNewDefaultLogger(t *testing.T) {
+func TestNewDefaultSQLLogger(t *testing.T) {
 	var l testLogger
 
-	defaultLogger := NewDefaultLogger(&l)
-	defaultLogger.Connect(123)
+	defaultSQLLogger := NewDefaultSQLLogger(&l)
+	defaultSQLLogger.Connect(123)
 
 	expectedEntries := []string{
 		"Connect → CONN(123)",
