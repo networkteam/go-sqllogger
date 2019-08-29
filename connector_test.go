@@ -38,7 +38,7 @@ type testLogger struct {
 	logs []string
 }
 
-var _ sqllogger.Logger = &testLogger{}
+var _ sqllogger.SQLLogger = &testLogger{}
 
 func (tl *testLogger) Connect(connID int64) {
 	tl.logs = append(tl.logs, "Connect")

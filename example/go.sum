@@ -2,3 +2,5 @@ github.com/lib/pq v1.2.0 h1:LXpIM/LZ5xGFhOpXAQUIMM1HdyqzVYM13zNdjCEEcA0=
 github.com/lib/pq v1.2.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/networkteam/go-sqllogger v0.2.0-pre1 h1:MG5WzrZeawMOHc+xnSXPJJu1l8UDrwX4YliV2xhSG3U=
 github.com/networkteam/go-sqllogger v0.2.0-pre1/go.mod h1:1A3S6ejnctS++4ibyQMWybEfA4Ff+WwzoG2vHeVbkhc=
+github.com/networkteam/go-sqllogger v0.2.0-pre2 h1:Ksp52E/iPTVXi5lfLVwmQkJ4OC7/TMCn90z44EAvrkA=
+github.com/networkteam/go-sqllogger v0.2.0-pre2/go.mod h1:1A3S6ejnctS++4ibyQMWybEfA4Ff+WwzoG2vHeVbkhc=
