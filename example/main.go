@@ -12,16 +12,16 @@ import (
 )
 
 func main() {
-	l := log.New(os.Stderr, "SQL: ", 0)
+	logger := log.New(os.Stderr, "SQL: ", 0)
 
-	logger := sqllogger.NewDefaultLogger(l)
-	logger.LogClose = true
+	sqlLogger := sqllogger.NewDefaultSQLLogger(logger)
+	sqlLogger.LogClose = true
 
 	pqConnector, err := pq.NewConnector("dbname=test sslmode=disable")
 	if err != nil {
 		failf("could not connect to database: %v", err)
 	}
-	connector := sqllogger.LoggingConnector(logger, pqConnector)
+	connector := sqllogger.LoggingConnector(sqlLogger, pqConnector)
 
 	db := sql.OpenDB(connector)
 

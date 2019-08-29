@@ -356,7 +356,7 @@ func (l *lrows) Next(dest []driver.Value) error {
 	return l.rows.Next(dest)
 }
 
-func wrapRows(id int64, log Logger, rows driver.Rows) driver.Rows {
+func wrapRows(id int64, log SQLLogger, rows driver.Rows) driver.Rows {
 	return &lrows{
 		id:   id,
 		log:  log,

@@ -7,12 +7,13 @@
 
 **Go SQL driver adapter for logging queries and other SQL operations**
 
-* Any `driver.Connector` can be wrapped with `sqllogger.LoggingConnector(driver.Connector)`
+* Any `driver.Connector` can be wrapped with `sqllogger.LoggingConnector(SQLLogger, driver.Connector)`
   to log **Connect**, **Prepare**, **Exec**, **Query**, **Commit**, **Rollback** and **Close**
   on database, connection, statement, rows and transaction instances
-  (see [./logger.go](logger.go) for all intercepted calls)
-* The `sqllogger.Logger` interface can be implemented to log SQL to any logging library
-* `sqllogger.NewDefaultLogger(*log.Logger)` offers a standard library implementation
+  (see [./sql_logger.go](sql_logger.go) for all intercepted calls)
+* The `sqllogger.SQLLogger` interface can be implemented to log SQL to any logging library
+* `sqllogger.NewDefaultSQLLogger(StdLogger)` offers a default implementation for the standard library `log.Logger` or
+  implementations of the `StdLogger` interface
 * Zero dependencies
 
 > Note: The adapter has been tested using `github.com/lib/pq`. Other SQL drivers might need additional work.
@@ -40,20 +41,17 @@ import (
 )
 
 func main() {
-	// DefaultLogger logs to standard log package
-	l := log.New(os.Stderr, "SQL: ", 0)
+	logger := log.New(os.Stderr, "SQL: ", 0)
 
-	logger := sqllogger.NewDefaultLogger(l)
-	logger.LogClose = true
+	sqlLogger := sqllogger.NewDefaultSQLLogger(logger)
+	sqlLogger.LogClose = true
 
-	// Any driver exposing a driver.Connector can be wrapped with logging
 	pqConnector, err := pq.NewConnector("dbname=test sslmode=disable")
 	if err != nil {
 		failf("could not connect to database: %v", err)
 	}
-	connector := sqllogger.LoggingConnector(logger, pqConnector)
+	connector := sqllogger.LoggingConnector(sqlLogger, pqConnector)
 
-	// db is a standard *sql.DB
 	db := sql.OpenDB(connector)
 
 	ctx := context.Background()
@@ -78,6 +76,7 @@ func failf(format string, args ...interface{}) {
 	fmt.Printf(format+"\n", args...)
 	os.Exit(1)
 }
+
 ```
 
 Running the example:
