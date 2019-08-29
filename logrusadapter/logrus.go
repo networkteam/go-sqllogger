@@ -7,11 +7,29 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func NewLogger(l *logrus.Logger, opts ...Opts) *Logger {
+	var o Opts
+	switch len(opts) {
+	case 0:
+		o = DefaultOpts()
+	case 1:
+		o = opts[0]
+	default:
+		panic("NewLogger expects zero or one opts")
+	}
+	return &Logger{
+		logrusLogger: l,
+		opts:         o,
+	}
+}
+
 type Logger struct {
 	logrusLogger *logrus.Logger
 
 	opts Opts
 }
+
+var _ sqllogger.Logger = Logger{}
 
 type Opts struct {
 	ConnectLevel logrus.Level
@@ -33,22 +51,6 @@ func DefaultOpts() Opts {
 	}
 }
 
-func NewLogger(l *logrus.Logger, opts ...Opts) *Logger {
-	var o Opts
-	switch len(opts) {
-	case 0:
-		o = DefaultOpts()
-	case 1:
-		o = opts[0]
-	default:
-		panic("NewLogger expects zero or one opts")
-	}
-	return &Logger{
-		logrusLogger: l,
-		opts:         o,
-	}
-}
-
 func (l Logger) Connect(connID int64) {
 	l.logrusLogger.
 		WithField("connID", connID).
@@ -58,7 +60,7 @@ func (l Logger) Connect(connID int64) {
 func (l Logger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
 	l.logrusLogger.
 		WithField("connID", connID).
-		Log(l.opts.TxLevel, "CONN Begin TX")
+		Log(l.opts.TxLevel, "CONN Begin")
 }
 
 func (l Logger) ConnPrepare(connID, stmtID int64, query string) {
@@ -66,7 +68,7 @@ func (l Logger) ConnPrepare(connID, stmtID int64, query string) {
 		WithField("connID", connID).
 		WithField("query", query).
 		WithField("stmtID", stmtID).
-		Log(l.opts.PrepareLevel, "CONN Prepare STMT")
+		Log(l.opts.PrepareLevel, "CONN Prepare")
 }
 
 func (l Logger) ConnPrepareContext(connID int64, stmtID int64, query string) {
@@ -74,7 +76,7 @@ func (l Logger) ConnPrepareContext(connID int64, stmtID int64, query string) {
 		WithField("connID", connID).
 		WithField("query", query).
 		WithField("stmtID", stmtID).
-		Log(l.opts.PrepareLevel, "CONN Prepare STMT")
+		Log(l.opts.PrepareLevel, "CONN Prepare")
 }
 
 func (l Logger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
@@ -83,7 +85,7 @@ func (l Logger) ConnQuery(connID, rowsID int64, query string, args []driver.Valu
 		WithField("query", query).
 		WithField("args", args).
 		WithField("rowsID", rowsID).
-		Log(l.opts.QueryLevel, "CONN Query ROWS")
+		Log(l.opts.QueryLevel, "CONN Query")
 }
 
 func (l Logger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
@@ -92,7 +94,7 @@ func (l Logger) ConnQueryContext(connID int64, rowsID int64, query string, args 
 		WithField("query", query).
 		WithField("args", args).
 		WithField("rowsID", rowsID).
-		Log(l.opts.QueryLevel, "CONN Query ROWS")
+		Log(l.opts.QueryLevel, "CONN Query")
 }
 
 func (l Logger) ConnExec(connID int64, query string, args []driver.Value) {
@@ -173,5 +175,3 @@ func (l Logger) TxRollback(txID int64) {
 		WithField("txID", txID).
 		Log(l.opts.TxLevel, "TX Rollback")
 }
-
-var _ sqllogger.Logger = Logger{}
