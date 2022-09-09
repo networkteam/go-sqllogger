@@ -32,7 +32,7 @@ type DefaultSQLLogger struct {
 	LogClose   bool
 }
 
-var _ SQLLogger = &DefaultSQLLogger{}
+var _ FullSQLLogger = &DefaultSQLLogger{}
 
 // TxRollback satisfies Logger interface
 func (dl *DefaultSQLLogger) TxRollback(txID int64) {

@@ -6,7 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
-	"sync"
+	"sync/atomic"
 )
 
 // LoggingConnector wraps the given driver.Connector
@@ -16,19 +16,16 @@ import (
 // of the original driver that are not exposed on the returned driver.Connector.
 func LoggingConnector(log SQLLogger, connector driver.Connector) driver.Connector {
 	return &lconnector{
-		log:  log,
-		cnct: connector,
+		log:   log,
+		cnct:  connector,
+		idseq: &idseq{},
 	}
 }
 
-var (
-	idseq   int64
-	idseqMx sync.Mutex
-)
-
 type lconnector struct {
-	cnct driver.Connector
-	log  SQLLogger
+	cnct  driver.Connector
+	log   SQLLogger
+	idseq *idseq
 }
 
 func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -37,9 +34,11 @@ func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
 		return nil, err
 	}
 
-	id := nextID()
-	l.log.Connect(id)
-	return &lconn{id: id, log: l.log, conn: originalConn}, nil
+	id := l.idseq.next()
+	if logger, ok := l.log.(ConnectLogger); ok {
+		logger.Connect(id)
+	}
+	return &lconn{id: id, log: l.log, conn: originalConn, idseq: l.idseq}, nil
 }
 
 func (l *lconnector) Driver() driver.Driver {
@@ -48,9 +47,10 @@ func (l *lconnector) Driver() driver.Driver {
 }
 
 type lconn struct {
-	id   int64
-	log  SQLLogger
-	conn driver.Conn
+	id    int64
+	log   SQLLogger
+	conn  driver.Conn
+	idseq *idseq
 }
 
 func (l *lconn) Begin() (driver.Tx, error) {
@@ -59,8 +59,10 @@ func (l *lconn) Begin() (driver.Tx, error) {
 		return nil, err
 	}
 
-	txID := nextID()
-	l.log.ConnBegin(l.id, txID, driver.TxOptions{})
+	txID := l.idseq.next()
+	if logger, ok := l.log.(ConnBeginLogger); ok {
+		logger.ConnBegin(l.id, txID, driver.TxOptions{})
+	}
 
 	return l.wrapTx(txID, origTx), nil
 }
@@ -72,8 +74,10 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 			return nil, err
 		}
 
-		txID := nextID()
-		l.log.ConnBegin(l.id, txID, opts)
+		txID := l.idseq.next()
+		if logger, ok := l.log.(ConnBeginLogger); ok {
+			logger.ConnBegin(l.id, txID, opts)
+		}
 
 		return l.wrapTx(txID, origTx), nil
 	}
@@ -97,36 +101,53 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 		return nil, err
 	}
 
-	txID := nextID()
-	l.log.ConnBegin(l.id, txID, opts)
+	txID := l.idseq.next()
+	if logger, ok := l.log.(ConnBeginLogger); ok {
+		logger.ConnBegin(l.id, txID, opts)
+	}
 
 	return l.wrapTx(txID, origTx), nil
 }
 
-func (l *lconn) Query(query string, args []driver.Value) (driver.Rows, error) {
+func (l *lconn) Query(query string, args []driver.Value) (rows driver.Rows, err error) {
+	var rowsID int64
+	if logger, ok := l.log.(ConnQueryTracer); ok {
+		defer logger.ConnQueryTrace(l.id, query, args)(rowsID, err)
+	}
 	if queryer, ok := l.conn.(driver.Queryer); ok {
-		origRows, err := queryer.Query(query, args)
+		var origRows driver.Rows
+		origRows, err = queryer.Query(query, args)
 		if err != nil {
 			return nil, err
 		}
 
-		rowsID := nextID()
-		l.log.ConnQuery(l.id, rowsID, query, args)
+		rowsID = l.idseq.next()
+		if logger, ok := l.log.(ConnQueryLogger); ok {
+			logger.ConnQuery(l.id, rowsID, query, args)
+		}
 
 		return wrapRows(rowsID, l.log, origRows), nil
 	}
 	return nil, driver.ErrSkip
 }
 
-func (l *lconn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+func (l *lconn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (rows driver.Rows, err error) {
 	if queryerCtx, ok := l.conn.(driver.QueryerContext); ok {
-		origRows, err := queryerCtx.QueryContext(ctx, query, args)
+		var rowsID int64
+		if logger, ok := l.log.(ConnQueryContextTracer); ok {
+			defer logger.ConnQueryContextTrace(ctx, l.id, query, args)(rowsID, err)
+		}
+
+		var origRows driver.Rows
+		origRows, err = queryerCtx.QueryContext(ctx, query, args)
 		if err != nil {
 			return nil, err
 		}
 
-		rowsID := nextID()
-		l.log.ConnQueryContext(l.id, rowsID, query, args)
+		rowsID = l.idseq.next()
+		if logger, ok := l.log.(ConnQueryContextLogger); ok {
+			logger.ConnQueryContext(l.id, rowsID, query, args)
+		}
 
 		return wrapRows(rowsID, l.log, origRows), nil
 	}
@@ -140,7 +161,9 @@ func (l *lconn) Exec(query string, args []driver.Value) (driver.Result, error) {
 			return nil, err
 		}
 
-		l.log.ConnExec(l.id, query, args)
+		if logger, ok := l.log.(ConnExecLogger); ok {
+			logger.ConnExec(l.id, query, args)
+		}
 
 		return res, nil
 	}
@@ -154,7 +177,9 @@ func (l *lconn) ExecContext(ctx context.Context, query string, args []driver.Nam
 			return nil, err
 		}
 
-		l.log.ConnExecContext(l.id, query, args)
+		if logger, ok := l.log.(ConnExecContextLogger); ok {
+			logger.ConnExecContext(l.id, query, args)
+		}
 
 		return res, nil
 	}
@@ -167,10 +192,12 @@ func (l *lconn) Prepare(query string) (driver.Stmt, error) {
 		return nil, err
 	}
 
-	stmtID := nextID()
-	l.log.ConnPrepare(l.id, stmtID, query)
+	stmtID := l.idseq.next()
+	if logger, ok := l.log.(ConnPrepareLogger); ok {
+		logger.ConnPrepare(l.id, stmtID, query)
+	}
 
-	return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query}, nil
+	return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query, idseq: l.idseq}, nil
 }
 
 func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
@@ -180,10 +207,12 @@ func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 			return nil, err
 		}
 
-		stmtID := nextID()
-		l.log.ConnPrepareContext(l.id, stmtID, query)
+		stmtID := l.idseq.next()
+		if logger, ok := l.log.(ConnPrepareContextLogger); ok {
+			logger.ConnPrepareContext(l.id, stmtID, query)
+		}
 
-		return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query}, nil
+		return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query, idseq: l.idseq}, nil
 	}
 
 	// Copied from ctxutil.go to handle fallback if interface is not implemented
@@ -201,7 +230,9 @@ func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 }
 
 func (l *lconn) Close() error {
-	l.log.ConnClose(l.id)
+	if logger, ok := l.log.(ConnCloseLogger); ok {
+		logger.ConnClose(l.id)
+	}
 	return l.conn.Close()
 }
 
@@ -217,6 +248,7 @@ type lstmt struct {
 	stmt  driver.Stmt
 	query string
 	id    int64
+	idseq *idseq
 }
 
 func (l *lstmt) Close() error {
@@ -225,7 +257,9 @@ func (l *lstmt) Close() error {
 		return err
 	}
 
-	l.log.StmtClose(l.id)
+	if logger, ok := l.log.(StmtCloseLogger); ok {
+		logger.StmtClose(l.id)
+	}
 
 	return nil
 }
@@ -240,7 +274,9 @@ func (l *lstmt) Exec(args []driver.Value) (driver.Result, error) {
 		return nil, err
 	}
 
-	l.log.StmtExec(l.id, l.query, args)
+	if logger, ok := l.log.(StmtExecLogger); ok {
+		logger.StmtExec(l.id, l.query, args)
+	}
 
 	return res, err
 }
@@ -252,7 +288,9 @@ func (l *lstmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driv
 			return nil, err
 		}
 
-		l.log.StmtExecContext(l.id, l.query, args)
+		if logger, ok := l.log.(StmtExecContextLogger); ok {
+			logger.StmtExecContext(l.id, l.query, args)
+		}
 
 		return res, nil
 	}
@@ -272,27 +310,41 @@ func (l *lstmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driv
 	return l.Exec(dargs)
 }
 
-func (l *lstmt) Query(args []driver.Value) (driver.Rows, error) {
-	origRows, err := l.stmt.Query(args)
+func (l *lstmt) Query(args []driver.Value) (rows driver.Rows, err error) {
+	var rowsID int64
+	if logger, ok := l.log.(StmtQueryTracer); ok {
+		defer logger.StmtQueryTrace(l.id, l.query, args)(rowsID, err)
+	}
+	var origRows driver.Rows
+	origRows, err = l.stmt.Query(args)
 	if err != nil {
 		return nil, err
 	}
 
-	rowsID := nextID()
-	l.log.StmtQuery(l.id, rowsID, l.query, args)
+	rowsID = l.idseq.next()
+	if logger, ok := l.log.(StmtQueryLogger); ok {
+		logger.StmtQuery(l.id, rowsID, l.query, args)
+	}
 
 	return wrapRows(rowsID, l.log, origRows), nil
 }
 
-func (l *lstmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+func (l *lstmt) QueryContext(ctx context.Context, args []driver.NamedValue) (rows driver.Rows, err error) {
 	if stmtQueryCtx, ok := l.stmt.(driver.StmtQueryContext); ok {
-		rows, err := stmtQueryCtx.QueryContext(ctx, args)
+		var rowsID int64
+		if logger, ok := l.log.(StmtQueryContextTracer); ok {
+			defer logger.StmtQueryContextTrace(ctx, l.id, l.query, args)(rowsID, err)
+		}
+
+		rows, err = stmtQueryCtx.QueryContext(ctx, args)
 		if err != nil {
 			return nil, err
 		}
 
-		rowsID := nextID()
-		l.log.StmtQueryContext(l.id, rowsID, l.query, args)
+		rowsID = l.idseq.next()
+		if logger, ok := l.log.(StmtQueryContextLogger); ok {
+			logger.StmtQueryContext(l.id, rowsID, l.query, args)
+		}
 
 		return wrapRows(rowsID, l.log, rows), nil
 	}
@@ -347,7 +399,9 @@ func (l *lrows) Close() error {
 		return err
 	}
 
-	l.log.RowsClose(l.id)
+	if logger, ok := l.log.(RowsCloseLogger); ok {
+		logger.RowsClose(l.id)
+	}
 
 	return nil
 }
@@ -376,7 +430,9 @@ func (l *ltx) Commit() error {
 		return err
 	}
 
-	l.log.TxCommit(l.id)
+	if logger, ok := l.log.(TxCommitLogger); ok {
+		logger.TxCommit(l.id)
+	}
 
 	return nil
 }
@@ -387,7 +443,9 @@ func (l *ltx) Rollback() error {
 		return err
 	}
 
-	l.log.TxRollback(l.id)
+	if logger, ok := l.log.(TxRollbackLogger); ok {
+		logger.TxRollback(l.id)
+	}
 
 	return nil
 }
@@ -409,14 +467,6 @@ func (l *ld) Open(name string) (driver.Conn, error) {
 	panic("Not implemented, use sql.OpenDB(...)")
 }
 
-func nextID() int64 {
-	idseqMx.Lock()
-	defer idseqMx.Unlock()
-
-	idseq++
-	return idseq
-}
-
 func namedValueToValue(named []driver.NamedValue) ([]driver.Value, error) {
 	dargs := make([]driver.Value, len(named))
 	for n, param := range named {
@@ -426,4 +476,12 @@ func namedValueToValue(named []driver.NamedValue) ([]driver.Value, error) {
 		dargs[n] = param.Value
 	}
 	return dargs, nil
+}
+
+type idseq struct {
+	id atomic.Int64
+}
+
+func (i *idseq) next() int64 {
+	return i.id.Add(1)
 }

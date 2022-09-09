@@ -8,7 +8,7 @@ import (
 type testLogger []string
 
 func (tl *testLogger) Printf(format string, args ...interface{}) {
-	*tl = append([]string(*tl), fmt.Sprintf(format, args...))
+	*tl = append(*tl, fmt.Sprintf(format, args...))
 }
 
 func TestNewDefaultSQLLogger(t *testing.T) {
