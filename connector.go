@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
+	"reflect"
 	"sync"
 )
 
@@ -31,6 +32,8 @@ type lconnector struct {
 	log  SQLLogger
 }
 
+var _ driver.Connector = &lconnector{}
+
 func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
 	originalConn, err := l.cnct.Connect(ctx)
 	if err != nil {
@@ -52,6 +55,18 @@ type lconn struct {
 	log  SQLLogger
 	conn driver.Conn
 }
+
+var _ driver.Conn = &lconn{}
+var _ driver.SessionResetter = &lconn{}
+var _ driver.Execer = &lconn{}
+var _ driver.ExecerContext = &lconn{}
+var _ driver.Queryer = &lconn{}
+var _ driver.QueryerContext = &lconn{}
+var _ driver.ConnBeginTx = &lconn{}
+var _ driver.ConnPrepareContext = &lconn{}
+var _ driver.NamedValueChecker = &lconn{}
+var _ driver.Pinger = &lconn{}
+var _ driver.Validator = &lconn{}
 
 func (l *lconn) Begin() (driver.Tx, error) {
 	origTx, err := l.conn.Begin()
@@ -207,6 +222,27 @@ func (l *lconn) ResetSession(ctx context.Context) error {
 	return nil
 }
 
+func (l *lconn) CheckNamedValue(nv *driver.NamedValue) error {
+	if checker, ok := l.conn.(driver.NamedValueChecker); ok {
+		return checker.CheckNamedValue(nv)
+	}
+	return driver.ErrSkip
+}
+
+func (l *lconn) Ping(ctx context.Context) error {
+	if pinger, ok := l.conn.(driver.Pinger); ok {
+		return pinger.Ping(ctx)
+	}
+	return driver.ErrSkip
+}
+
+func (l *lconn) IsValid() bool {
+	if validator, ok := l.conn.(driver.Validator); ok {
+		return validator.IsValid()
+	}
+	return true // Default to assuming it's valid
+}
+
 func (l *lconn) Close() error {
 	l.log.ConnClose(l.id)
 	return l.conn.Close()
@@ -225,6 +261,11 @@ type lstmt struct {
 	query string
 	id    int64
 }
+
+var _ driver.Stmt = &lstmt{}
+var _ driver.StmtExecContext = &lstmt{}
+var _ driver.StmtQueryContext = &lstmt{}
+var _ driver.NamedValueChecker = &lstmt{}
 
 func (l *lstmt) Close() error {
 	err := l.stmt.Close()
@@ -319,6 +360,13 @@ func (l *lstmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dri
 	return l.Query(dargs)
 }
 
+func (l *lstmt) CheckNamedValue(nv *driver.NamedValue) error {
+	if checker, ok := l.stmt.(driver.NamedValueChecker); ok {
+		return checker.CheckNamedValue(nv)
+	}
+	return driver.ErrSkip
+}
+
 var _ driver.StmtExecContext = &lstmt{}
 var _ driver.StmtQueryContext = &lstmt{}
 
@@ -328,7 +376,13 @@ type lrows struct {
 	id   int64
 }
 
+var _ driver.Rows = &lrows{}
 var _ driver.RowsNextResultSet = &lrows{}
+var _ driver.RowsColumnTypeDatabaseTypeName = &lrows{}
+var _ driver.RowsColumnTypeLength = &lrows{}
+var _ driver.RowsColumnTypeNullable = &lrows{}
+var _ driver.RowsColumnTypePrecisionScale = &lrows{}
+var _ driver.RowsColumnTypeScanType = &lrows{}
 
 func (l *lrows) HasNextResultSet() bool {
 	if nrsRows, ok := l.rows.(driver.RowsNextResultSet); ok {
@@ -363,6 +417,41 @@ func (l *lrows) Next(dest []driver.Value) error {
 	return l.rows.Next(dest)
 }
 
+func (l *lrows) ColumnTypeDatabaseTypeName(index int) string {
+	if ct, ok := l.rows.(driver.RowsColumnTypeDatabaseTypeName); ok {
+		return ct.ColumnTypeDatabaseTypeName(index)
+	}
+	return ""
+}
+
+func (l *lrows) ColumnTypeLength(index int) (length int64, ok bool) {
+	if ct, ok := l.rows.(driver.RowsColumnTypeLength); ok {
+		return ct.ColumnTypeLength(index)
+	}
+	return 0, false
+}
+
+func (l *lrows) ColumnTypeNullable(index int) (nullable, ok bool) {
+	if ct, ok := l.rows.(driver.RowsColumnTypeNullable); ok {
+		return ct.ColumnTypeNullable(index)
+	}
+	return false, false
+}
+
+func (l *lrows) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) {
+	if ct, ok := l.rows.(driver.RowsColumnTypePrecisionScale); ok {
+		return ct.ColumnTypePrecisionScale(index)
+	}
+	return 0, 0, false
+}
+
+func (l *lrows) ColumnTypeScanType(index int) reflect.Type {
+	if ct, ok := l.rows.(driver.RowsColumnTypeScanType); ok {
+		return ct.ColumnTypeScanType(index)
+	}
+	return nil
+}
+
 func wrapRows(id int64, log SQLLogger, rows driver.Rows) driver.Rows {
 	return &lrows{
 		id:   id,
@@ -376,6 +465,8 @@ type ltx struct {
 	tx  driver.Tx
 	id  int64
 }
+
+var _ driver.Tx = &ltx{}
 
 func (l *ltx) Commit() error {
 	err := l.tx.Commit()
@@ -412,8 +503,22 @@ type ld struct {
 	drv driver.Driver
 }
 
+var _ driver.Driver = &ld{}
+var _ driver.DriverContext = &ld{}
+
 func (l *ld) Open(name string) (driver.Conn, error) {
 	panic("Not implemented, use sql.OpenDB(...)")
+}
+
+func (l *ld) OpenConnector(name string) (driver.Connector, error) {
+	if dc, ok := l.drv.(driver.DriverContext); ok {
+		connector, err := dc.OpenConnector(name)
+		if err != nil {
+			return nil, err
+		}
+		return LoggingConnector(l.log, connector), nil
+	}
+	return nil, driver.ErrSkip
 }
 
 func nextID() int64 {
