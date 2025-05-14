@@ -36,7 +36,7 @@ type DefaultSQLLogger struct {
 var _ SQLLogger = &DefaultSQLLogger{}
 
 // TxRollback satisfies Logger interface
-func (dl *DefaultSQLLogger) TxRollback(txID int64) {
+func (dl *DefaultSQLLogger) TxRollback(ctx context.Context, txID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -44,7 +44,7 @@ func (dl *DefaultSQLLogger) TxRollback(txID int64) {
 }
 
 // TxCommit satisfies Logger interface
-func (dl *DefaultSQLLogger) TxCommit(txID int64) {
+func (dl *DefaultSQLLogger) TxCommit(ctx context.Context, txID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -52,7 +52,7 @@ func (dl *DefaultSQLLogger) TxCommit(txID int64) {
 }
 
 // RowsClose satisfies Logger interface
-func (dl *DefaultSQLLogger) RowsClose(rowsID int64) {
+func (dl *DefaultSQLLogger) RowsClose(ctx context.Context, rowsID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -81,7 +81,7 @@ func (dl *DefaultSQLLogger) ConnBegin(ctx context.Context, connID, txID int64, o
 }
 
 // ConnPrepare satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnPrepare(connID, stmtID int64, query string) {
+func (dl *DefaultSQLLogger) ConnPrepare(ctx context.Context, connID, stmtID int64, query string) {
 	if !dl.Enabled {
 		return
 	}
@@ -97,7 +97,7 @@ func (dl *DefaultSQLLogger) ConnPrepareContext(ctx context.Context, connID int64
 }
 
 // ConnQuery satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) ConnQuery(ctx context.Context, connID, rowsID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -113,7 +113,7 @@ func (dl *DefaultSQLLogger) ConnQueryContext(ctx context.Context, connID int64, 
 }
 
 // ConnExec satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnExec(connID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) ConnExec(ctx context.Context, connID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -129,7 +129,7 @@ func (dl *DefaultSQLLogger) ConnExecContext(ctx context.Context, connID int64, q
 }
 
 // ConnClose satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnClose(connID int64) {
+func (dl *DefaultSQLLogger) ConnClose(ctx context.Context, connID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -139,7 +139,7 @@ func (dl *DefaultSQLLogger) ConnClose(connID int64) {
 }
 
 // StmtExec satisfies Logger interface
-func (dl *DefaultSQLLogger) StmtExec(stmtID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) StmtExec(ctx context.Context, stmtID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -155,7 +155,7 @@ func (dl *DefaultSQLLogger) StmtExecContext(ctx context.Context, stmtID int64, q
 }
 
 // StmtQuery satisfies Logger interface
-func (dl *DefaultSQLLogger) StmtQuery(stmtID, rowsID int64, query string, args []driver.Value) {
+func (dl *DefaultSQLLogger) StmtQuery(ctx context.Context, stmtID, rowsID int64, query string, args []driver.Value) {
 	if !dl.Enabled {
 		return
 	}
@@ -171,7 +171,7 @@ func (dl *DefaultSQLLogger) StmtQueryContext(ctx context.Context, stmtID int64, 
 }
 
 // StmtClose satisfies Logger interface
-func (dl *DefaultSQLLogger) StmtClose(stmtID int64) {
+func (dl *DefaultSQLLogger) StmtClose(ctx context.Context, stmtID int64) {
 	if !dl.Enabled {
 		return
 	}

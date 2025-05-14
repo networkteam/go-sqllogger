@@ -12,42 +12,51 @@ import (
 //
 // All methods are only called if the original operation returned without an error.
 type SQLLogger interface {
-	// Called on DB connect with a generated connection id
+	// Connect is called on DB connect with a generated connection id.
 	Connect(ctx context.Context, connID int64)
-
-	// Called on a transaction begin on a connection with the connection id and a generated transaction id
+	// ConnBegin is called on a transaction begin on a connection with the connection id and a generated transaction id.
 	ConnBegin(ctx context.Context, connID, txID int64, opts driver.TxOptions)
-	// Called on a prepare statement on a connection with the connection id and a generated statement id
-	ConnPrepare(connID, stmtID int64, query string)
-	// Called on a prepare statement with context on a connection with the connection id and a generated statement id
+	// ConnPrepare is called on a prepare statement on a connection with the connection id and a generated statement id.
+	// Note: ctx is only for sqllogger metadata since ConnPrepare does not receive a context.
+	ConnPrepare(ctx context.Context, connID, stmtID int64, query string)
+	// ConnPrepareContext is called on a prepare statement with context on a connection with the connection id and a generated statement id.
 	ConnPrepareContext(ctx context.Context, connID int64, stmtID int64, query string)
-	// Called on a query on a connection with the connection id and a generated rows id
-	ConnQuery(connID, rowsID int64, query string, args []driver.Value)
-	// Called on a query with context on a connection with the connection id and a generated rows id
+	// ConnQuery is called on a query on a connection with the connection id and a generated rows id.
+	// Note: ctx is only for sqllogger metadata since ConnQuery does not receive a context.
+	ConnQuery(ctx context.Context, connID, rowsID int64, query string, args []driver.Value)
+	// ConnQueryContext is called on a query with context on a connection with the connection id and a generated rows id.
 	ConnQueryContext(ctx context.Context, connID int64, rowsID int64, query string, args []driver.NamedValue)
-	// Called on an exec on a connection with the connection id
-	ConnExec(connID int64, query string, args []driver.Value)
-	// Called on an exec with context on a connection with the connection id
+	// ConnExec is called on an exec on a connection with the connection id.
+	// Note: ctx is only for sqllogger metadata since ConnExec does not receive a context.
+	ConnExec(ctx context.Context, connID int64, query string, args []driver.Value)
+	// ConnExecContext is called on an exec with context on a connection with the connection id.
 	ConnExecContext(ctx context.Context, connID int64, query string, args []driver.NamedValue)
-	// Called on a close on a connection with the connection id
-	ConnClose(connID int64)
+	// ConnClose is called on a close on a connection with the connection id.
+	// Note: ctx is only for sqllogger metadata since ConnClose does not receive a context.
+	ConnClose(ctx context.Context, connID int64)
 
-	// Called on an exec on a statement with the statement id
-	StmtExec(stmtID int64, query string, args []driver.Value)
-	// Called on an exec with context on a statement with the statement id
+	// StmtExec is called on an exec on a statement with the statement id.
+	// Note: ctx is only for sqllogger metadata since StmtExec does not receive a context.
+	StmtExec(ctx context.Context, stmtID int64, query string, args []driver.Value)
+	// StmtExecContext is called on an exec with context on a statement with the statement id.
 	StmtExecContext(ctx context.Context, stmtID int64, query string, args []driver.NamedValue)
-	// Called on a query on a statement with the statement id and generated rows id
-	StmtQuery(stmtID int64, rowsID int64, query string, args []driver.Value)
-	// Called on a query with context on a statement with the statement id and generated rows id
+	// StmtQuery is called on a query on a statement with the statement id and generated rows id.
+	// Note: ctx is only for sqllogger metadata since StmtQuery does not receive a context.
+	StmtQuery(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.Value)
+	// StmtQueryContext is called on a query with context on a statement with the statement id and generated rows id.
 	StmtQueryContext(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.NamedValue)
-	// Called on a close on a statement with the statement id
-	StmtClose(stmtID int64)
+	// StmtClose is called on a close on a statement with the statement id.
+	// Note: ctx is only for sqllogger metadata since StmtClose does not receive a context.
+	StmtClose(ctx context.Context, stmtID int64)
 
-	// Called on a close on rows with the rows id
-	RowsClose(rowsID int64)
+	// RowsClose is called on a close on rows with the rows id.
+	// Note: ctx is only for sqllogger metadata since RowsClose does not receive a context.
+	RowsClose(ctx context.Context, rowsID int64)
 
-	// Called on a commit on a transaction with the transaction id
-	TxCommit(txID int64)
-	// Called on a rollback on a transaction with the transaction id
-	TxRollback(txID int64)
+	// TxCommit is called on a commit on a transaction with the transaction id.
+	// Note: ctx is only for sqllogger metadata since TxCommit does not receive a context.
+	TxCommit(ctx context.Context, txID int64)
+	// TxRollback is called on a rollback on a transaction with the transaction id.
+	// Note: ctx is only for sqllogger metadata since TxRollback does not receive a context.
+	TxRollback(ctx context.Context, txID int64)
 }

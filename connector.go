@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"sync"
+	"time"
 )
 
 // LoggingConnector wraps the given driver.Connector
@@ -35,10 +36,14 @@ type lconnector struct {
 var _ driver.Connector = &lconnector{}
 
 func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
+	timing := Timing{Start: time.Now()}
 	originalConn, err := l.cnct.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	timing.End = time.Now()
+	ctx = WithTiming(ctx, timing)
 
 	id := nextID()
 	l.log.Connect(ctx, id)
@@ -69,23 +74,31 @@ var _ driver.Pinger = &lconn{}
 var _ driver.Validator = &lconn{}
 
 func (l *lconn) Begin() (driver.Tx, error) {
+	timing := Timing{Start: time.Now()}
 	origTx, err := l.conn.Begin()
 	if err != nil {
 		return nil, err
 	}
 
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
 	txID := nextID()
-	l.log.ConnBegin(context.TODO(), l.id, txID, driver.TxOptions{})
+	l.log.ConnBegin(ctx, l.id, txID, driver.TxOptions{})
 
 	return l.wrapTx(txID, origTx), nil
 }
 
 func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	if connBeginTx, ok := l.conn.(driver.ConnBeginTx); ok {
+		timing := Timing{Start: time.Now()}
 		origTx, err := connBeginTx.BeginTx(ctx, opts)
 		if err != nil {
 			return nil, err
 		}
+
+		timing.End = time.Now()
+		ctx = WithTiming(ctx, timing)
 
 		txID := nextID()
 		l.log.ConnBegin(ctx, l.id, txID, opts)
@@ -107,10 +120,14 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 		return nil, errors.New("sql: driver does not support read-only transactions")
 	}
 
+	timing := Timing{Start: time.Now()}
 	origTx, err := l.conn.Begin()
 	if err != nil {
 		return nil, err
 	}
+
+	timing.End = time.Now()
+	ctx = WithTiming(ctx, timing)
 
 	txID := nextID()
 	l.log.ConnBegin(ctx, l.id, txID, opts)
@@ -120,13 +137,17 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 
 func (l *lconn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	if queryer, ok := l.conn.(driver.Queryer); ok {
+		timing := Timing{Start: time.Now()}
 		origRows, err := queryer.Query(query, args)
 		if err != nil {
 			return nil, err
 		}
 
+		timing.End = time.Now()
+		ctx := WithTiming(context.Background(), timing)
+
 		rowsID := nextID()
-		l.log.ConnQuery(l.id, rowsID, query, args)
+		l.log.ConnQuery(ctx, l.id, rowsID, query, args)
 
 		return wrapRows(rowsID, l.log, origRows), nil
 	}
@@ -150,12 +171,16 @@ func (l *lconn) QueryContext(ctx context.Context, query string, args []driver.Na
 
 func (l *lconn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	if execer, ok := l.conn.(driver.Execer); ok {
+		timing := Timing{Start: time.Now()}
 		res, err := execer.Exec(query, args)
 		if err != nil {
 			return nil, err
 		}
 
-		l.log.ConnExec(l.id, query, args)
+		timing.End = time.Now()
+		ctx := WithTiming(context.Background(), timing)
+
+		l.log.ConnExec(ctx, l.id, query, args)
 
 		return res, nil
 	}
@@ -164,10 +189,14 @@ func (l *lconn) Exec(query string, args []driver.Value) (driver.Result, error) {
 
 func (l *lconn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	if execerCtx, ok := l.conn.(driver.ExecerContext); ok {
+		timing := Timing{Start: time.Now()}
 		res, err := execerCtx.ExecContext(ctx, query, args)
 		if err != nil {
 			return nil, err
 		}
+
+		timing.End = time.Now()
+		ctx = WithTiming(ctx, timing)
 
 		l.log.ConnExecContext(ctx, l.id, query, args)
 
@@ -177,23 +206,31 @@ func (l *lconn) ExecContext(ctx context.Context, query string, args []driver.Nam
 }
 
 func (l *lconn) Prepare(query string) (driver.Stmt, error) {
+	timing := Timing{Start: time.Now()}
 	origStmt, err := l.conn.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
 	stmtID := nextID()
-	l.log.ConnPrepare(l.id, stmtID, query)
+	l.log.ConnPrepare(ctx, l.id, stmtID, query)
 
 	return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query}, nil
 }
 
 func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	if connPrepareCtx, ok := l.conn.(driver.ConnPrepareContext); ok {
+		timing := Timing{Start: time.Now()}
 		origStmt, err := connPrepareCtx.PrepareContext(ctx, query)
 		if err != nil {
 			return nil, err
 		}
+
+		timing.End = time.Now()
+		ctx = WithTiming(ctx, timing)
 
 		stmtID := nextID()
 		l.log.ConnPrepareContext(ctx, l.id, stmtID, query)
@@ -203,16 +240,16 @@ func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 
 	// Copied from ctxutil.go to handle fallback if interface is not implemented
 
-	si, err := l.Prepare(query)
+	origStmt, err := l.Prepare(query)
 	if err == nil {
 		select {
 		default:
 		case <-ctx.Done():
-			si.Close()
+			origStmt.Close()
 			return nil, ctx.Err()
 		}
 	}
-	return si, err
+	return origStmt, err
 }
 
 func (l *lconn) ResetSession(ctx context.Context) error {
@@ -244,8 +281,15 @@ func (l *lconn) IsValid() bool {
 }
 
 func (l *lconn) Close() error {
-	l.log.ConnClose(l.id)
-	return l.conn.Close()
+	timing := Timing{Start: time.Now()}
+	err := l.conn.Close()
+
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
+	l.log.ConnClose(ctx, l.id)
+
+	return err
 }
 
 var _ driver.Execer = &lconn{}
@@ -268,14 +312,15 @@ var _ driver.StmtQueryContext = &lstmt{}
 var _ driver.NamedValueChecker = &lstmt{}
 
 func (l *lstmt) Close() error {
+	timing := Timing{Start: time.Now()}
 	err := l.stmt.Close()
-	if err != nil {
-		return err
-	}
 
-	l.log.StmtClose(l.id)
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
 
-	return nil
+	l.log.StmtClose(ctx, l.id)
+
+	return err
 }
 
 func (l *lstmt) NumInput() int {
@@ -283,22 +328,30 @@ func (l *lstmt) NumInput() int {
 }
 
 func (l *lstmt) Exec(args []driver.Value) (driver.Result, error) {
+	timing := Timing{Start: time.Now()}
 	res, err := l.stmt.Exec(args)
 	if err != nil {
 		return nil, err
 	}
 
-	l.log.StmtExec(l.id, l.query, args)
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
+	l.log.StmtExec(ctx, l.id, l.query, args)
 
 	return res, err
 }
 
 func (l *lstmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	if stmtExecCtx, ok := l.stmt.(driver.StmtExecContext); ok {
+		timing := Timing{Start: time.Now()}
 		res, err := stmtExecCtx.ExecContext(ctx, args)
 		if err != nil {
 			return nil, err
 		}
+
+		timing.End = time.Now()
+		ctx = WithTiming(ctx, timing)
 
 		l.log.StmtExecContext(ctx, l.id, l.query, args)
 
@@ -321,23 +374,31 @@ func (l *lstmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driv
 }
 
 func (l *lstmt) Query(args []driver.Value) (driver.Rows, error) {
+	timing := Timing{Start: time.Now()}
 	origRows, err := l.stmt.Query(args)
 	if err != nil {
 		return nil, err
 	}
 
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
 	rowsID := nextID()
-	l.log.StmtQuery(l.id, rowsID, l.query, args)
+	l.log.StmtQuery(ctx, l.id, rowsID, l.query, args)
 
 	return wrapRows(rowsID, l.log, origRows), nil
 }
 
 func (l *lstmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	if stmtQueryCtx, ok := l.stmt.(driver.StmtQueryContext); ok {
+		timing := Timing{Start: time.Now()}
 		rows, err := stmtQueryCtx.QueryContext(ctx, args)
 		if err != nil {
 			return nil, err
 		}
+
+		timing.End = time.Now()
+		ctx = WithTiming(ctx, timing)
 
 		rowsID := nextID()
 		l.log.StmtQueryContext(ctx, l.id, rowsID, l.query, args)
@@ -403,14 +464,15 @@ func (l *lrows) Columns() []string {
 }
 
 func (l *lrows) Close() error {
+	timing := Timing{Start: time.Now()}
 	err := l.rows.Close()
-	if err != nil {
-		return err
-	}
 
-	l.log.RowsClose(l.id)
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
 
-	return nil
+	l.log.RowsClose(ctx, l.id)
+
+	return err
 }
 
 func (l *lrows) Next(dest []driver.Value) error {
@@ -469,23 +531,31 @@ type ltx struct {
 var _ driver.Tx = &ltx{}
 
 func (l *ltx) Commit() error {
+	timing := Timing{Start: time.Now()}
 	err := l.tx.Commit()
 	if err != nil {
 		return err
 	}
 
-	l.log.TxCommit(l.id)
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
+	l.log.TxCommit(ctx, l.id)
 
 	return nil
 }
 
 func (l *ltx) Rollback() error {
+	timing := Timing{Start: time.Now()}
 	err := l.tx.Rollback()
 	if err != nil {
 		return err
 	}
 
-	l.log.TxRollback(l.id)
+	timing.End = time.Now()
+	ctx := WithTiming(context.Background(), timing)
+
+	l.log.TxRollback(ctx, l.id)
 
 	return nil
 }

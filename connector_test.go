@@ -70,7 +70,7 @@ func (tl *testLogger) ConnBegin(ctx context.Context, connID, txID int64, opts dr
 	tl.logs = append(tl.logs, "ConnBegin")
 }
 
-func (tl *testLogger) ConnPrepare(connID, stmtID int64, query string) {
+func (tl *testLogger) ConnPrepare(ctx context.Context, connID, stmtID int64, query string) {
 	tl.logs = append(tl.logs, "ConnPrepare")
 }
 
@@ -78,7 +78,7 @@ func (tl *testLogger) ConnPrepareContext(ctx context.Context, connID int64, stmt
 	tl.logs = append(tl.logs, "ConnPrepareContext")
 }
 
-func (tl *testLogger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
+func (tl *testLogger) ConnQuery(ctx context.Context, connID, rowsID int64, query string, args []driver.Value) {
 	tl.logs = append(tl.logs, "ConnQuery")
 }
 
@@ -86,7 +86,7 @@ func (tl *testLogger) ConnQueryContext(ctx context.Context, connID int64, rowsID
 	tl.logs = append(tl.logs, "ConnQueryContext")
 }
 
-func (tl *testLogger) ConnExec(connID int64, query string, args []driver.Value) {
+func (tl *testLogger) ConnExec(ctx context.Context, connID int64, query string, args []driver.Value) {
 	tl.logs = append(tl.logs, "ConnExec")
 }
 
@@ -94,11 +94,11 @@ func (tl *testLogger) ConnExecContext(ctx context.Context, connID int64, query s
 	tl.logs = append(tl.logs, "ConnExecContext")
 }
 
-func (tl *testLogger) ConnClose(connID int64) {
+func (tl *testLogger) ConnClose(ctx context.Context, connID int64) {
 	tl.logs = append(tl.logs, "ConnClose")
 }
 
-func (tl *testLogger) StmtExec(stmtID int64, query string, args []driver.Value) {
+func (tl *testLogger) StmtExec(ctx context.Context, stmtID int64, query string, args []driver.Value) {
 	tl.logs = append(tl.logs, "StmtExec")
 }
 
@@ -106,7 +106,7 @@ func (tl *testLogger) StmtExecContext(ctx context.Context, stmtID int64, query s
 	tl.logs = append(tl.logs, "StmtExecContext")
 }
 
-func (tl *testLogger) StmtQuery(stmtID int64, rowsID int64, query string, args []driver.Value) {
+func (tl *testLogger) StmtQuery(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.Value) {
 	tl.logs = append(tl.logs, "StmtQuery")
 }
 
@@ -114,19 +114,19 @@ func (tl *testLogger) StmtQueryContext(ctx context.Context, stmtID int64, rowsID
 	tl.logs = append(tl.logs, "StmtQueryContext")
 }
 
-func (tl *testLogger) StmtClose(stmtID int64) {
+func (tl *testLogger) StmtClose(ctx context.Context, stmtID int64) {
 	tl.logs = append(tl.logs, "StmtClose")
 }
 
-func (tl *testLogger) RowsClose(rowsID int64) {
+func (tl *testLogger) RowsClose(ctx context.Context, rowsID int64) {
 	tl.logs = append(tl.logs, "RowsClose")
 }
 
-func (tl *testLogger) TxCommit(txID int64) {
+func (tl *testLogger) TxCommit(ctx context.Context, txID int64) {
 	tl.logs = append(tl.logs, "TxCommit")
 }
 
-func (tl *testLogger) TxRollback(txID int64) {
+func (tl *testLogger) TxRollback(ctx context.Context, txID int64) {
 	tl.logs = append(tl.logs, "TxRollback")
 }
 
