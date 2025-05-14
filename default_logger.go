@@ -1,6 +1,7 @@
 package sqllogger
 
 import (
+	"context"
 	"database/sql/driver"
 )
 
@@ -61,7 +62,7 @@ func (dl *DefaultSQLLogger) RowsClose(rowsID int64) {
 }
 
 // Connect satisfies Logger interface
-func (dl *DefaultSQLLogger) Connect(connID int64) {
+func (dl *DefaultSQLLogger) Connect(ctx context.Context, connID int64) {
 	if !dl.Enabled {
 		return
 	}
@@ -72,7 +73,7 @@ func (dl *DefaultSQLLogger) Connect(connID int64) {
 }
 
 // ConnBegin satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
+func (dl *DefaultSQLLogger) ConnBegin(ctx context.Context, connID, txID int64, opts driver.TxOptions) {
 	if !dl.Enabled {
 		return
 	}
@@ -88,7 +89,7 @@ func (dl *DefaultSQLLogger) ConnPrepare(connID, stmtID int64, query string) {
 }
 
 // ConnPrepareContext satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnPrepareContext(connID int64, stmtID int64, query string) {
+func (dl *DefaultSQLLogger) ConnPrepareContext(ctx context.Context, connID int64, stmtID int64, query string) {
 	if !dl.Enabled {
 		return
 	}
@@ -104,7 +105,7 @@ func (dl *DefaultSQLLogger) ConnQuery(connID, rowsID int64, query string, args [
 }
 
 // ConnQueryContext satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) ConnQueryContext(ctx context.Context, connID int64, rowsID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -120,7 +121,7 @@ func (dl *DefaultSQLLogger) ConnExec(connID int64, query string, args []driver.V
 }
 
 // ConnExecContext satisfies Logger interface
-func (dl *DefaultSQLLogger) ConnExecContext(connID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) ConnExecContext(ctx context.Context, connID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -146,7 +147,7 @@ func (dl *DefaultSQLLogger) StmtExec(stmtID int64, query string, args []driver.V
 }
 
 // StmtExecContext satisfies Logger interface
-func (dl *DefaultSQLLogger) StmtExecContext(stmtID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) StmtExecContext(ctx context.Context, stmtID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}
@@ -162,7 +163,7 @@ func (dl *DefaultSQLLogger) StmtQuery(stmtID, rowsID int64, query string, args [
 }
 
 // StmtQueryContext satisfies Logger interface
-func (dl *DefaultSQLLogger) StmtQueryContext(stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (dl *DefaultSQLLogger) StmtQueryContext(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
 	if !dl.Enabled {
 		return
 	}

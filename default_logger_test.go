@@ -1,6 +1,7 @@
 package sqllogger
 
 import (
+	"context"
 	"fmt"
 	"testing"
 )
@@ -15,7 +16,7 @@ func TestNewDefaultSQLLogger(t *testing.T) {
 	var l testLogger
 
 	defaultSQLLogger := NewDefaultSQLLogger(&l)
-	defaultSQLLogger.Connect(123)
+	defaultSQLLogger.Connect(context.Background(), 123)
 
 	expectedEntries := []string{
 		"Connect → CONN(123)",

@@ -62,11 +62,11 @@ type testLogger struct {
 
 var _ sqllogger.SQLLogger = &testLogger{}
 
-func (tl *testLogger) Connect(connID int64) {
+func (tl *testLogger) Connect(ctx context.Context, connID int64) {
 	tl.logs = append(tl.logs, "Connect")
 }
 
-func (tl *testLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
+func (tl *testLogger) ConnBegin(ctx context.Context, connID, txID int64, opts driver.TxOptions) {
 	tl.logs = append(tl.logs, "ConnBegin")
 }
 
@@ -74,7 +74,7 @@ func (tl *testLogger) ConnPrepare(connID, stmtID int64, query string) {
 	tl.logs = append(tl.logs, "ConnPrepare")
 }
 
-func (tl *testLogger) ConnPrepareContext(connID int64, stmtID int64, query string) {
+func (tl *testLogger) ConnPrepareContext(ctx context.Context, connID int64, stmtID int64, query string) {
 	tl.logs = append(tl.logs, "ConnPrepareContext")
 }
 
@@ -82,7 +82,7 @@ func (tl *testLogger) ConnQuery(connID, rowsID int64, query string, args []drive
 	tl.logs = append(tl.logs, "ConnQuery")
 }
 
-func (tl *testLogger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (tl *testLogger) ConnQueryContext(ctx context.Context, connID int64, rowsID int64, query string, args []driver.NamedValue) {
 	tl.logs = append(tl.logs, "ConnQueryContext")
 }
 
@@ -90,7 +90,7 @@ func (tl *testLogger) ConnExec(connID int64, query string, args []driver.Value) 
 	tl.logs = append(tl.logs, "ConnExec")
 }
 
-func (tl *testLogger) ConnExecContext(connID int64, query string, args []driver.NamedValue) {
+func (tl *testLogger) ConnExecContext(ctx context.Context, connID int64, query string, args []driver.NamedValue) {
 	tl.logs = append(tl.logs, "ConnExecContext")
 }
 
@@ -102,7 +102,7 @@ func (tl *testLogger) StmtExec(stmtID int64, query string, args []driver.Value) 
 	tl.logs = append(tl.logs, "StmtExec")
 }
 
-func (tl *testLogger) StmtExecContext(stmtID int64, query string, args []driver.NamedValue) {
+func (tl *testLogger) StmtExecContext(ctx context.Context, stmtID int64, query string, args []driver.NamedValue) {
 	tl.logs = append(tl.logs, "StmtExecContext")
 }
 
@@ -110,7 +110,7 @@ func (tl *testLogger) StmtQuery(stmtID int64, rowsID int64, query string, args [
 	tl.logs = append(tl.logs, "StmtQuery")
 }
 
-func (tl *testLogger) StmtQueryContext(stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
+func (tl *testLogger) StmtQueryContext(ctx context.Context, stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
 	tl.logs = append(tl.logs, "StmtQueryContext")
 }
 

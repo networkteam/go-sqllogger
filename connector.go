@@ -41,7 +41,7 @@ func (l *lconnector) Connect(ctx context.Context) (driver.Conn, error) {
 	}
 
 	id := nextID()
-	l.log.Connect(id)
+	l.log.Connect(ctx, id)
 	return &lconn{id: id, log: l.log, conn: originalConn}, nil
 }
 
@@ -75,7 +75,7 @@ func (l *lconn) Begin() (driver.Tx, error) {
 	}
 
 	txID := nextID()
-	l.log.ConnBegin(l.id, txID, driver.TxOptions{})
+	l.log.ConnBegin(context.TODO(), l.id, txID, driver.TxOptions{})
 
 	return l.wrapTx(txID, origTx), nil
 }
@@ -88,7 +88,7 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 		}
 
 		txID := nextID()
-		l.log.ConnBegin(l.id, txID, opts)
+		l.log.ConnBegin(ctx, l.id, txID, opts)
 
 		return l.wrapTx(txID, origTx), nil
 	}
@@ -113,7 +113,7 @@ func (l *lconn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, 
 	}
 
 	txID := nextID()
-	l.log.ConnBegin(l.id, txID, opts)
+	l.log.ConnBegin(ctx, l.id, txID, opts)
 
 	return l.wrapTx(txID, origTx), nil
 }
@@ -141,7 +141,7 @@ func (l *lconn) QueryContext(ctx context.Context, query string, args []driver.Na
 		}
 
 		rowsID := nextID()
-		l.log.ConnQueryContext(l.id, rowsID, query, args)
+		l.log.ConnQueryContext(ctx, l.id, rowsID, query, args)
 
 		return wrapRows(rowsID, l.log, origRows), nil
 	}
@@ -169,7 +169,7 @@ func (l *lconn) ExecContext(ctx context.Context, query string, args []driver.Nam
 			return nil, err
 		}
 
-		l.log.ConnExecContext(l.id, query, args)
+		l.log.ConnExecContext(ctx, l.id, query, args)
 
 		return res, nil
 	}
@@ -196,7 +196,7 @@ func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 		}
 
 		stmtID := nextID()
-		l.log.ConnPrepareContext(l.id, stmtID, query)
+		l.log.ConnPrepareContext(ctx, l.id, stmtID, query)
 
 		return &lstmt{id: stmtID, log: l.log, stmt: origStmt, query: query}, nil
 	}
@@ -300,7 +300,7 @@ func (l *lstmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driv
 			return nil, err
 		}
 
-		l.log.StmtExecContext(l.id, l.query, args)
+		l.log.StmtExecContext(ctx, l.id, l.query, args)
 
 		return res, nil
 	}
@@ -340,7 +340,7 @@ func (l *lstmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dri
 		}
 
 		rowsID := nextID()
-		l.log.StmtQueryContext(l.id, rowsID, l.query, args)
+		l.log.StmtQueryContext(ctx, l.id, rowsID, l.query, args)
 
 		return wrapRows(rowsID, l.log, rows), nil
 	}
