@@ -17,7 +17,7 @@ func TestLoggingConnector(t *testing.T) {
 	ctx := context.Background()
 
 	db := sql.OpenDB(loggingConnector)
-	stmt, err := db.PrepareContext(ctx, "CREATE|fizzbuzz|seq=int16,fizz=bool,buzz=bool")
+	stmt, err := db.PrepareContext(ctx, "CREATE|fizzbuzz|seq=int64,fizz=bool,buzz=bool")
 	if err != nil {
 		t.Fatalf("Unexpected error from PrepareContext: %v", err)
 	}
@@ -26,11 +26,33 @@ func TestLoggingConnector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error from ExecContext: %v", err)
 	}
+	err = stmt.Close()
+	if err != nil {
+		t.Fatalf("Unexpected error from Close: %v", err)
+	}
 
-	actualLogs := len(logger.logs)
-	expectedLogs := 3
-	if actualLogs != expectedLogs {
-		t.Fatalf("Exepcted %d log entries, got %d", expectedLogs, actualLogs)
+	_, err = db.ExecContext(ctx, `INSERT|fizzbuzz|seq=?,fizz=?,buzz=?`, 1, false, false)
+	if err != nil {
+		t.Fatalf("Unexpected error from ExecContext: %v", err)
+	}
+
+	actualLogs := logger.logs
+	expectedLogs := []string{
+		`Connect`,
+		`ConnPrepareContext`,
+		`StmtExecContext`,
+		`StmtClose`,
+		`ConnPrepareContext`,
+		`StmtExecContext`,
+		`StmtClose`,
+	}
+	if len(actualLogs) != len(expectedLogs) {
+		t.Fatalf("Expected %d log entries, got %d: %+v", len(expectedLogs), len(actualLogs), actualLogs)
+	}
+	for i, actualEntry := range actualLogs {
+		if actualEntry != expectedLogs[i] {
+			t.Errorf("Expected log entry %d to be %q, got %q", i, expectedLogs[i], actualEntry)
+		}
 	}
 }
 
@@ -45,11 +67,11 @@ func (tl *testLogger) Connect(connID int64) {
 }
 
 func (tl *testLogger) ConnBegin(connID, txID int64, opts driver.TxOptions) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnBegin")
 }
 
 func (tl *testLogger) ConnPrepare(connID, stmtID int64, query string) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnPrepare")
 }
 
 func (tl *testLogger) ConnPrepareContext(connID int64, stmtID int64, query string) {
@@ -57,27 +79,27 @@ func (tl *testLogger) ConnPrepareContext(connID int64, stmtID int64, query strin
 }
 
 func (tl *testLogger) ConnQuery(connID, rowsID int64, query string, args []driver.Value) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnQuery")
 }
 
 func (tl *testLogger) ConnQueryContext(connID int64, rowsID int64, query string, args []driver.NamedValue) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnQueryContext")
 }
 
 func (tl *testLogger) ConnExec(connID int64, query string, args []driver.Value) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnExec")
 }
 
 func (tl *testLogger) ConnExecContext(connID int64, query string, args []driver.NamedValue) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnExecContext")
 }
 
 func (tl *testLogger) ConnClose(connID int64) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "ConnClose")
 }
 
 func (tl *testLogger) StmtExec(stmtID int64, query string, args []driver.Value) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "StmtExec")
 }
 
 func (tl *testLogger) StmtExecContext(stmtID int64, query string, args []driver.NamedValue) {
@@ -85,27 +107,27 @@ func (tl *testLogger) StmtExecContext(stmtID int64, query string, args []driver.
 }
 
 func (tl *testLogger) StmtQuery(stmtID int64, rowsID int64, query string, args []driver.Value) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "StmtQuery")
 }
 
 func (tl *testLogger) StmtQueryContext(stmtID int64, rowsID int64, query string, args []driver.NamedValue) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "StmtQueryContext")
 }
 
 func (tl *testLogger) StmtClose(stmtID int64) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "StmtClose")
 }
 
 func (tl *testLogger) RowsClose(rowsID int64) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "RowsClose")
 }
 
 func (tl *testLogger) TxCommit(txID int64) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "TxCommit")
 }
 
 func (tl *testLogger) TxRollback(txID int64) {
-	panic("implement me")
+	tl.logs = append(tl.logs, "TxRollback")
 }
 
 func newTestLogger() *testLogger {

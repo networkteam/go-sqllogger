@@ -200,6 +200,13 @@ func (l *lconn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 	return si, err
 }
 
+func (l *lconn) ResetSession(ctx context.Context) error {
+	if sr, ok := l.conn.(driver.SessionResetter); ok {
+		return sr.ResetSession(ctx)
+	}
+	return nil
+}
+
 func (l *lconn) Close() error {
 	l.log.ConnClose(l.id)
 	return l.conn.Close()
